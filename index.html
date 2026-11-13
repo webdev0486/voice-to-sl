@@ -107,7 +107,7 @@
   <ol class="steps">
     <li>Wear your Voice to Chat prim in Second Life.</li>
     <li>Click the link it gives you in chat. This page opens with your prim's address filled in.</li>
-    <li>Press <b>Start listening</b> and talk. Each sentence is posted when you pause.</li>
+    <li>Press <b>Turn On Mic</b> and talk. Each sentence is posted when you pause.</li>
   </ol>
 
   <div id="inViewer" class="banner" hidden>
@@ -148,7 +148,7 @@
 
   <section class="panel">
     <div class="row">
-      <button id="mic" type="button">Start listening</button>
+      <button id="mic" type="button">Turn On Mic</button>
       <div id="status" class="grow"><span id="dot" class="dot"></span><span id="statusText">Not listening</span></div>
     </div>
     <p id="hearing"></p>
@@ -323,7 +323,7 @@
   }
 
   function updateButton() {
-    micBtn.textContent = wanted ? 'Stop listening' : 'Start listening';
+    micBtn.textContent = wanted ? 'Turn Off Mic' : 'Turn On Mic';
     micBtn.classList.toggle('on', wanted);
   }
 
@@ -359,10 +359,10 @@
           break;   // normal; onend starts it again
         case 'not-allowed':
         case 'service-not-allowed':
-          stopListening('Microphone blocked — click the icon at the left of the address bar, allow the microphone, then press Start.', true);
+          stopListening('Microphone blocked — click the icon at the left of the address bar, allow the microphone, then press Turn On Mic.', true);
           break;
         case 'audio-capture':
-          stopListening('No microphone found. Plug one in and press Start.', true);
+          stopListening('No microphone found. Plug one in and press Turn On Mic.', true);
           break;
         case 'language-not-supported':
           stopListening("That language isn't supported here — pick another one.", true);
