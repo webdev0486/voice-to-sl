@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Talk into your microphone and your words appear in Second Life local chat.">
+<title>Voice to SL</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --panel: #ffffff;
+    --text: #1d1d1f;
+    --muted: #6c6b70;
+    --border: #dddbd4;
+    --accent: #2d6ad8;
+    --on-accent: #ffffff;
+    --live: #d33b3b;
+    --warn: #b0560c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416;
+      --panel: #1e1e21;
+      --text: #ececee;
+      --muted: #9b9aa2;
+      --border: #333339;
+      --accent: #6a96ff;
+      --on-accent: #0c0c0f;
+      --live: #ff6b6b;
+      --warn: #f2a24f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+  }
+  main { max-width: 620px; margin: 0 auto; padding: 28px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 {
+    font-size: 13px; margin: 0 0 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .sub { margin: 0 0 12px; color: var(--muted); }
+  .steps { margin: 0 0 20px; padding-left: 22px; color: var(--muted); }
+  .steps li { margin-bottom: 2px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  label { display: block; font-weight: 600; margin-bottom: 6px; }
+  input[type=text], select {
+    width: 100%; padding: 9px 10px; font: inherit; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+  }
+  .hint { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .row > .grow { flex: 1 1 220px; width: auto; }
+  .check { display: flex; gap: 8px; align-items: center; font-weight: 400; margin: 12px 0 0; }
+  button {
+    font: inherit; font-weight: 600; padding: 9px 16px; cursor: pointer;
+    color: var(--text); background: var(--panel);
+    border: 1px solid var(--border); border-radius: 8px;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  #mic {
+    font-size: 17px; padding: 13px 24px; min-width: 190px;
+    color: var(--on-accent); background: var(--accent); border-color: var(--accent);
+  }
+  #mic.on { background: var(--live); border-color: var(--live); }
+  #status { display: flex; gap: 8px; align-items: center; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.live { background: var(--live); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .err { color: var(--warn); }
+  #hearing { min-height: 1.5em; margin: 12px 0; color: var(--muted); font-style: italic; }
+  #log { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; }
+  #log li { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); }
+  #log li:first-child { border-top: 0; }
+  #log time {
+    flex: none; font-size: 12px; color: var(--muted); padding-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  #log span { overflow-wrap: anywhere; }
+  #log .failed span { color: var(--warn); }
+  #log .empty { color: var(--muted); }
+  .banner {
+    padding: 12px 14px; margin-bottom: 14px; border-radius: 8px;
+    border: 1px solid var(--warn); color: var(--warn);
+  }
+  .banner.info { border-color: var(--accent); color: var(--text); }
+  .banner .row { margin-top: 10px; }
+  footer { font-size: 13px; color: var(--muted); }
+  footer p { margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Voice to SL</h1>
+  <p class="sub">Talk into your microphone and your words appear in Second Life local chat.</p>
+  <ol class="steps">
+    <li>Wear your Voice to Chat prim in Second Life.</li>
+    <li>Click the link it gives you in chat. This page opens with your prim's address filled in.</li>
+    <li>Press <b>Start listening</b> and talk. Each sentence is posted when you pause.</li>
+  </ol>
+
+  <div id="inViewer" class="banner" hidden>
+    <b>This is the Second Life viewer's built-in browser, which can't hear your microphone.</b>
+    Copy this link and open it in Google Chrome or Microsoft Edge:
+    <div class="row">
+      <input id="viewerLink" class="grow" type="text" readonly>
+      <button id="copyLink" type="button">Copy</button>
+    </div>
+  </div>
+
+  <div id="unsupported" class="banner" hidden>
+    This browser can't turn speech into text. Open this page in <b>Google Chrome</b> or <b>Microsoft Edge</b>.
+  </div>
+
+  <div id="handedOff" class="banner info" hidden>
+    Your other Voice to SL tab is already listening and has switched to the new address. You can close this tab.
+  </div>
+
+  <div id="confirmLink" class="banner info" hidden>
+    <b>Use this prim?</b> This link is for a Voice to Chat prim worn by <b id="confirmWho"></b>.
+    Everything you say will be sent to it, so only continue if the link came from your own prim.
+    <div class="row">
+      <button id="confirmYes" type="button">Use this prim</button>
+      <button id="confirmNo" type="button">Ignore</button>
+    </div>
+  </div>
+
+  <section class="panel">
+    <label for="url">Prim address</label>
+    <input id="url" type="text" spellcheck="false" autocomplete="off"
+           placeholder="Filled in by the link from your prim, or paste it here">
+    <p id="dest" class="hint" hidden>Sending to the prim worn by <b id="destWho"></b>.</p>
+    <p class="hint">When you change regions your prim gives you a new link. Click it, and a tab
+      that's already listening switches to the new address by itself.
+      Touch the prim &rarr; <b>Get Link</b> to see the link again.</p>
+  </section>
+
+  <section class="panel">
+    <div class="row">
+      <button id="mic" type="button">Start listening</button>
+      <div id="status" class="grow"><span id="dot" class="dot"></span><span id="statusText">Not listening</span></div>
+    </div>
+    <p id="hearing"></p>
+    <label for="lang">Language</label>
+    <select id="lang">
+      <option value="en-US">English (US)</option>
+      <option value="en-GB">English (UK)</option>
+      <option value="en-AU">English (Australia)</option>
+      <option value="es-ES">Español (España)</option>
+      <option value="es-MX">Español (México)</option>
+      <option value="fr-FR">Français</option>
+      <option value="de-DE">Deutsch</option>
+      <option value="it-IT">Italiano</option>
+      <option value="pt-BR">Português (Brasil)</option>
+      <option value="pt-PT">Português (Portugal)</option>
+      <option value="nl-NL">Nederlands</option>
+      <option value="pl-PL">Polski</option>
+      <option value="ru-RU">Русский</option>
+      <option value="tr-TR">Türkçe</option>
+      <option value="ja-JP">日本語</option>
+      <option value="ko-KR">한국어</option>
+      <option value="zh-CN">中文 (普通话)</option>
+    </select>
+    <label class="check"><input id="cap" type="checkbox" checked> Start each line with a capital letter</label>
+  </section>
+
+  <section class="panel">
+    <h2>Sent to chat</h2>
+    <ul id="log"><li class="empty">Nothing yet.</li></ul>
+    <form id="testForm" class="row" style="margin-top:12px">
+      <input id="testText" class="grow" type="text" placeholder="Type a test message&hellip;">
+      <button type="submit">Send</button>
+    </form>
+  </section>
+
+  <footer>
+    <p>Keep this tab open while you play. The window can sit behind the viewer.</p>
+    <p>If nothing shows up in chat, your prim has a new address. Touch it &rarr; <b>Get Link</b> and click the link.</p>
+    <p>Your browser's own speech service turns speech into text (Google in Chrome, Microsoft in Edge).
+      The text then goes straight from your browser to your prim. This website never receives it.</p>
+    <p>Not affiliated with Linden Lab.</p>
+  </footer>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const urlBox = $('url'), langBox = $('lang'), capBox = $('cap'), micBtn = $('mic');
+  const log = $('log'), hearing = $('hearing');
+
+  // Settings are remembered between visits when the browser allows it.
+  const store = {
+    get(k, fallback) {
+      try { const v = localStorage.getItem('voice2sl.' + k); return v === null ? fallback : v; }
+      catch (e) { return fallback; }
+    },
+    set(k, v) {
+      try { localStorage.setItem('voice2sl.' + k, v); } catch (e) {}
+    }
+  };
+
+  // ---- Prim address ------------------------------------------------------
+  // Only Second Life addresses are accepted, so a doctored link can't send
+  // someone's speech to any other server.
+  function isSlAddress(text) {
+    try {
+      const u = new URL(text);
+      return u.protocol === 'https:' && /\.(secondlife\.io|lindenlab\.com)$/i.test(u.hostname);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Finds the prim address in a link from the prim ("...#addr=..."),
+  // a whole pasted chat line, or a bare address.
+  function addressFrom(text) {
+    let found = '';
+    const param = text.match(/[#?&]addr=([^&\s]+)/);
+    if (param) {
+      try { found = decodeURIComponent(param[1]); } catch (e) {}
+    } else {
+      const raw = text.match(/https?:\/\/[^\s"'<>]+/);
+      if (raw) found = raw[0];
+    }
+    return isSlAddress(found) ? found : '';
+  }
+
+  function currentUrl() {
+    return addressFrom(urlBox.value);
+  }
+
+  function setAddress(url, who) {
+    urlBox.value = url;
+    store.set('url', url);
+    store.set('who', who || '');
+    showWho(who);
+  }
+
+  // Shows whose prim the speech goes to, when the link said.
+  function showWho(who) {
+    $('destWho').textContent = who || '';
+    $('dest').hidden = !who;
+  }
+
+  function addressProblem() {
+    return urlBox.value.trim() ? 'not a Second Life prim address' : 'no prim address';
+  }
+
+  urlBox.addEventListener('input', () => {
+    store.set('url', urlBox.value);
+    store.set('who', '');
+    showWho('');
+  });
+  urlBox.addEventListener('change', () => {
+    const url = currentUrl();
+    if (url) setAddress(url);
+  });
+  capBox.addEventListener('change', () => store.set('cap', capBox.checked ? '1' : '0'));
+
+  // ---- Chat log ----------------------------------------------------------
+  function addLog(text) {
+    const empty = log.querySelector('.empty');
+    if (empty) empty.remove();
+    const li = document.createElement('li');
+    const time = document.createElement('time');
+    time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const span = document.createElement('span');
+    span.textContent = text;
+    li.append(time, span);
+    log.prepend(li);
+    while (log.children.length > 100) log.lastChild.remove();
+    return li;
+  }
+
+  function markFailed(li, why) {
+    li.classList.add('failed');
+    li.querySelector('span').textContent += ' — not sent (' + why + ')';
+  }
+
+  // ---- Sending to the prim -----------------------------------------------
+  let queue = Promise.resolve();   // keeps lines in the order they were spoken
+
+  function send(raw) {
+    let text = raw.trim().replace(/\s+/g, ' ');
+    if (!text) return;
+    if (capBox.checked) text = text.charAt(0).toUpperCase() + text.slice(1);
+    const item = addLog(text);
+    const url = currentUrl();
+    if (!url) { markFailed(item, addressProblem()); return; }
+    // Second Life can't add browser (CORS) headers to its reply, so the reply
+    // is unreadable here; a network failure still rejects, which we can show.
+    queue = queue.then(() =>
+      fetch(url, { method: 'POST', mode: 'no-cors', body: text })
+        .catch(() => markFailed(item, "couldn't reach the prim"))
+    );
+  }
+
+  $('testForm').addEventListener('submit', e => {
+    e.preventDefault();
+    send($('testText').value);
+    $('testText').value = '';
+  });
+
+  // ---- Speech recognition ------------------------------------------------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, wanted = false, retryDelay = 250;
+
+  function setStatus(text, mode) {
+    $('statusText').textContent = text;
+    $('statusText').className = mode === 'error' ? 'err' : '';
+    $('dot').className = mode === 'live' ? 'dot live' : 'dot';
+  }
+
+  function updateButton() {
+    micBtn.textContent = wanted ? 'Stop listening' : 'Start listening';
+    micBtn.classList.toggle('on', wanted);
+  }
+
+  function stopListening(message, isError) {
+    wanted = false;
+    if (rec) rec.abort();
+    hearing.textContent = '';
+    updateButton();
+    setStatus(message || 'Not listening', isError ? 'error' : '');
+  }
+
+  function createRecognizer() {
+    const r = new SR();
+    r.continuous = true;
+    r.interimResults = true;
+
+    r.onstart = () => setStatus('Listening — just talk', 'live');
+
+    r.onresult = e => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const result = e.results[i];
+        if (result.isFinal) send(result[0].transcript);
+        else interim += result[0].transcript;
+      }
+      hearing.textContent = interim;
+    };
+
+    r.onerror = e => {
+      switch (e.error) {
+        case 'no-speech':
+        case 'aborted':
+          break;   // normal; onend starts it again
+        case 'not-allowed':
+        case 'service-not-allowed':
+          stopListening('Microphone blocked — click the icon at the left of the address bar, allow the microphone, then press Start.', true);
+          break;
+        case 'audio-capture':
+          stopListening('No microphone found. Plug one in and press Start.', true);
+          break;
+        case 'language-not-supported':
+          stopListening("That language isn't supported here — pick another one.", true);
+          break;
+        case 'network':
+          retryDelay = 3000;
+          setStatus("Can't reach the speech service, retrying… (needs internet; Brave and Opera can't do speech, use Chrome or Edge)", 'error');
+          break;
+        default:
+          retryDelay = 1000;
+          setStatus('Speech error: ' + e.error + ' — retrying…', 'error');
+      }
+    };
+
+    // The browser ends a session after a pause or about a minute; keep going.
+    r.onend = () => {
+      hearing.textContent = '';
+      if (!wanted) return;
+      const delay = retryDelay;
+      retryDelay = 250;
+      setTimeout(() => {
+        if (!wanted) return;
+        try { r.start(); } catch (err) { /* already running */ }
+      }, delay);
+    };
+    return r;
+  }
+
+  function startListening() {
+    if (!currentUrl()) {
+      setStatus('Click the link from your prim, or paste its address above.', 'error');
+      urlBox.focus();
+      return;
+    }
+    if (!rec) rec = createRecognizer();
+    rec.lang = langBox.value;
+    wanted = true;
+    updateButton();
+    setStatus('Starting…', '');
+    $('handedOff').hidden = true;
+    if (tabs) tabs.postMessage({ type: 'started' });   // only one tab listens at a time
+    try { rec.start(); } catch (err) { /* already running */ }
+  }
+
+  micBtn.addEventListener('click', () => wanted ? stopListening() : startListening());
+
+  langBox.addEventListener('change', () => {
+    store.set('lang', langBox.value);
+    if (wanted && rec) {
+      rec.lang = langBox.value;
+      rec.stop();   // onend restarts it in the new language
+    }
+  });
+
+  // ---- Several tabs ------------------------------------------------------
+  // Each new link from the prim opens another tab. A tab that's already
+  // listening takes over the new address, so speech is never sent twice.
+  const tabs = 'BroadcastChannel' in window ? new BroadcastChannel('voice2sl') : null;
+  if (tabs) {
+    tabs.onmessage = e => {
+      const msg = e.data || {};
+      // Only sent for a link from the prim this browser already uses, or one
+      // the person just approved, so it's safe to switch without asking.
+      if (msg.type === 'address' && isSlAddress(msg.url)) {
+        setAddress(msg.url, msg.who);
+        if (wanted) tabs.postMessage({ type: 'taken' });
+      } else if (msg.type === 'taken') {
+        $('handedOff').hidden = false;
+      } else if (msg.type === 'started' && wanted) {
+        stopListening('Listening moved to another tab.');
+      }
+    };
+  }
+
+  // ---- Links from the prim -----------------------------------------------
+  // A link carries the prim's address, a private id the prim made up, and
+  // the wearer's name. A link from the prim this browser already uses
+  // switches over by itself (the teleport case). A link from any other prim
+  // needs an OK first, so someone else's link can't quietly take your speech.
+  function readLink(hash) {
+    const param = name => {
+      const m = hash.match(new RegExp('[#&]' + name + '=([^&]*)'));
+      try { return m ? decodeURIComponent(m[1]) : ''; } catch (e) { return ''; }
+    };
+    return { url: addressFrom(hash), id: param('id'), who: param('who').slice(0, 64) };
+  }
+
+  function useLink(link) {
+    if (link.id) store.set('primId', link.id);
+    setAddress(link.url, link.who);
+    if (tabs) tabs.postMessage({ type: 'address', url: link.url, who: link.who });
+  }
+
+  function askAboutLink(link) {
+    $('confirmWho').textContent = link.who || 'someone (no name given)';
+    $('confirmLink').hidden = false;
+    $('confirmYes').onclick = () => { $('confirmLink').hidden = true; useLink(link); };
+    $('confirmNo').onclick = () => { $('confirmLink').hidden = true; };
+  }
+
+  // ---- Start up ----------------------------------------------------------
+  const linkHash = location.hash;
+  if (linkHash) history.replaceState(null, '', location.pathname + location.search);
+  urlBox.value = store.get('url', '');
+  showWho(store.get('who', ''));
+
+  const fromLink = readLink(linkHash);
+  if (fromLink.url) {
+    if (fromLink.id && fromLink.id === store.get('primId', '')) useLink(fromLink);
+    else askAboutLink(fromLink);
+  }
+
+  const savedLang = store.get('lang', navigator.language);
+  langBox.value = [...langBox.options].some(o => o.value === savedLang) ? savedLang : 'en-US';
+  capBox.checked = store.get('cap', '1') === '1';
+
+  if (!SR) {
+    $('unsupported').hidden = false;
+    micBtn.disabled = true;
+  }
+
+  // The viewer's built-in browser has no speech recognition; point people
+  // to a real browser with their link ready to copy.
+  if (/SecondLife|Second Life|Firestorm/i.test(navigator.userAgent)) {
+    const link = location.origin + location.pathname +
+      (linkHash || (currentUrl() ? '#addr=' + encodeURIComponent(currentUrl()) : ''));
+    $('viewerLink').value = link;
+    $('inViewer').hidden = false;
+    $('unsupported').hidden = true;
+    $('confirmLink').hidden = true;
+    $('copyLink').addEventListener('click', () => {
+      $('viewerLink').select();
+      const done = () => { $('copyLink').textContent = 'Copied'; };
+      if (navigator.clipboard) navigator.clipboard.writeText(link).then(done, () => document.execCommand('copy') && done());
+      else if (document.execCommand('copy')) done();
+    });
+  }
+})();
+</script>
+</body>
+</html>
