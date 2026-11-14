@@ -72,17 +72,37 @@
     font: 15px/1.55 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:hover { text-decoration-thickness: 2px; }
   .page { max-width: 1140px; margin: 0 auto; padding: 36px 16px 56px; }
   .layout { display: grid; gap: 0 22px; grid-template-columns: minmax(0, 1fr); }
-  .app, .guide { width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; }
+  .app, .guide, .side { width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; }
   .app { min-width: 0; }
 
-  /* Wide screens: the how-to guide sits on the left of the app. */
+  /* Wide screens: two columns, the guide with Talking tips under it on the
+     left, the app with What's new under it on the right. Every part is
+     stretched to fill its row, and the last card in the app grows, so the
+     columns end at the same height. */
   @media (min-width: 960px) {
-    .layout { grid-template-columns: 340px minmax(0, 1fr); grid-template-areas: "guide app"; align-items: start; }
-    .app { grid-area: app; max-width: none; }
+    .layout {
+      grid-template-columns: 340px minmax(0, 1fr); grid-template-rows: auto 1fr;
+      grid-template-areas: "guide app" "tips news"; align-items: stretch;
+    }
+    .app { grid-area: app; max-width: none; display: flex; flex-direction: column; }
     .guide { grid-area: guide; max-width: none; }
+    .news { grid-area: news; max-width: none; }
+    .tips { grid-area: tips; max-width: none; }
     .app .steps { display: none; }   /* the guide covers these */
+    .app .grow { flex: 1 0 auto; display: flex; flex-direction: column; }
+    .app .grow .send-row { margin-top: auto; padding-top: 12px; }   /* like a chat window */
+  }
+  /* Very wide screens: What's new and Talking tips get a column on the right. */
+  @media (min-width: 1280px) {
+    .page { max-width: 1400px; }
+    .layout {
+      grid-template-columns: 340px minmax(0, 1fr) 300px;
+      grid-template-areas: "guide app news" "guide app tips";
+    }
   }
 
   /* ---- Header ---------------------------------------------------------- */
@@ -96,6 +116,12 @@
   .logo svg { width: 24px; height: 24px; }
   h1 { margin: 0; font-size: 26px; line-height: 1.15; font-weight: 750; letter-spacing: -.02em; }
   .sub { margin: 2px 0 0; color: var(--muted); }
+  .badge {
+    display: inline-block; vertical-align: middle; margin-left: 8px; padding: 2px 9px;
+    border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: .08em;
+    color: #1f1300; background: #f59e0b;
+  }
+  .badge[hidden] { display: none; }
 
   /* ---- How it works ---------------------------------------------------- */
   .steps {
@@ -246,6 +272,7 @@
   .switch input:checked { background: linear-gradient(145deg, var(--accent), var(--accent-2)); }
   .switch input:checked::after { transform: translateX(18px); }
   .switch input:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+  .switch-hint { margin-top: 4px; padding-left: 54px; }
 
   /* ---- Chat log -------------------------------------------------------- */
   #log { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; }
@@ -260,6 +287,53 @@
   #log .failed span { color: var(--warn); }
   #log li.empty { display: block; background: none; padding: 4px 0; color: var(--muted); animation: none; }
   .send-row { display: flex; gap: 8px; margin-top: 12px; }
+
+  /* ---- My word fixes --------------------------------------------------- */
+  .hint.intro { margin: 0 0 4px; }
+  #fixList { list-style: none; margin: 12px 0 0; padding: 0; }
+  #fixList li {
+    display: flex; gap: 8px; align-items: center;
+    padding: 6px 6px 6px 12px; margin-bottom: 6px; border-radius: 12px; background: var(--field);
+  }
+  #fixList .fix-text { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--muted); }
+  #fixList .fix-text b { font-weight: 600; color: var(--text); }
+  #fixList li.empty { display: block; padding: 0; background: none; color: var(--muted); font-size: 14px; }
+  .fix-remove {
+    flex: none; width: 32px; height: 32px; border: 0; border-radius: 9px; cursor: pointer;
+    font: inherit; font-size: 20px; line-height: 1; color: var(--muted); background: transparent;
+  }
+  .fix-remove:hover { color: var(--warn); background: var(--warn-soft); }
+  .fix-remove:focus-visible { outline: 3px solid var(--accent-soft); }
+  .fix-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    gap: 8px; align-items: center; margin-top: 12px;
+  }
+  .fix-arrow { color: var(--muted); }
+  .fix-say { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 12px; }
+  .fix-say .btn { display: inline-flex; gap: 8px; align-items: center; }
+  .fix-say .btn svg { width: 18px; height: 18px; }
+  .fix-say .btn.on {
+    color: var(--on-accent); background: linear-gradient(145deg, var(--live), var(--live-2));
+    box-shadow: 0 6px 16px -6px var(--live-glow);
+  }
+  .fix-say .btn[hidden] { display: none; }
+  #fixStatus { flex: 1 1 200px; margin: 0; }
+  @media (max-width: 480px) {
+    .fix-row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+    .fix-row .btn { grid-column: 1 / -1; }
+  }
+
+  /* ---- Listening log (test site only) ---------------------------------- */
+  #listenCard[hidden] { display: none; }
+  #listenLog { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; font-size: 13px; }
+  #listenLog li {
+    display: flex; gap: 10px; align-items: baseline; padding: 5px 0;
+    color: var(--muted); border-bottom: 1px solid var(--field-border);
+  }
+  #listenLog li:last-child { border-bottom: 0; }
+  #listenLog time { flex: none; font-variant-numeric: tabular-nums; }
+  #listenLog span { overflow-wrap: anywhere; }
+  #listenLog li.empty { display: block; border: 0; }
   .send-row input { flex: 1; min-width: 0; }
 
   /* ---- Banners --------------------------------------------------------- */
@@ -272,14 +346,18 @@
   .banner .row input { flex: 1 1 220px; }
 
   /* ---- How-to guide ---------------------------------------------------- */
-  .guide { font-size: 14px; }
-  .guide h2 + h3 { margin-top: 0; }
+  .guide, .side { font-size: 14px; }
+  .guide h2 + h3, .side h2 + h3 { margin-top: 0; }
   .guide h3 { margin: 20px 0 8px; font-size: 15px; font-weight: 700; }
   .guide p { margin: 0 0 8px; color: var(--muted); }
-  .guide ul, .guide ol { margin: 0 0 8px; padding-left: 20px; }
-  .guide li { margin-bottom: 6px; color: var(--muted); }
+  .guide ul, .guide ol, .side ul { margin: 0 0 8px; padding-left: 20px; }
+  .guide li, .side li { margin-bottom: 6px; color: var(--muted); }
   .guide ol li::marker { color: var(--accent); font-weight: 700; }
-  .guide b { color: var(--text); }
+  .guide b, .side b { color: var(--text); }
+
+  /* ---- What's new ------------------------------------------------------ */
+  .news h3 { margin: 18px 0 8px; font-size: 13px; font-weight: 700; color: var(--accent); }
+  .side li::marker { color: var(--accent); }
   .menu { display: grid; grid-template-columns: auto 1fr; gap: 8px 10px; margin: 0; align-items: baseline; }
   .menu dt {
     font-size: 12px; font-weight: 700; white-space: nowrap; text-align: center;
@@ -314,7 +392,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg>
     </div>
     <div>
-      <h1>Voice to SL</h1>
+      <h1>Voice to SL <span id="testBadge" class="badge" hidden>TEST</span></h1>
       <p class="sub">Talk into your microphone and your words appear in Second Life local chat.</p>
     </div>
   </header>
@@ -353,6 +431,16 @@
     </div>
   </div>
 
+  <section class="card">
+    <label for="url">Prim address</label>
+    <input id="url" type="text" spellcheck="false" autocomplete="off"
+           placeholder="Filled in by the link from your prim, or paste it here">
+    <p id="dest" class="hint dest" hidden>&check; Sending to the prim worn by <b id="destWho"></b>.</p>
+    <p class="hint">When you change regions your prim gives you a new link. Click it, and a tab
+      that's already listening switches to the new address by itself.
+      Touch the prim &rarr; <b>Get Link</b> to see the link again.</p>
+  </section>
+
   <section class="card mic-card">
     <button id="mic" type="button" aria-pressed="false">
       <span class="mic-circle">
@@ -367,20 +455,44 @@
   </section>
 
   <section class="card">
-    <h2>Settings</h2>
-    <label for="url">Prim address</label>
-    <input id="url" type="text" spellcheck="false" autocomplete="off"
-           placeholder="Filled in by the link from your prim, or paste it here">
-    <p id="dest" class="hint dest" hidden>&check; Sending to the prim worn by <b id="destWho"></b>.</p>
-    <p class="hint">When you change regions your prim gives you a new link. Click it, and a tab
-      that's already listening switches to the new address by itself.
-      Touch the prim &rarr; <b>Get Link</b> to see the link again.</p>
+    <h2>My word fixes</h2>
+    <p class="hint intro">Does the mic keep getting a word wrong for you? Click <b>Say the word</b> and say it, so
+      the page learns how the mic hears it. Then type how it should be spelled and click <b>Add</b>. Handy for
+      names, Second Life words, and words your accent makes hard to hear.</p>
+    <ul id="fixList"></ul>
+    <div class="fix-say">
+      <button id="fixSay" class="btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg>
+        <span id="fixSayLabel">Say the word</span>
+      </button>
+      <span id="fixStatus" class="hint" aria-live="polite">Click, then say the word the mic gets wrong.</span>
+    </div>
+    <form id="fixForm" class="fix-row">
+      <input id="fixFrom" type="text" maxlength="40" spellcheck="false" autocomplete="off"
+             placeholder="It hears… (sheep)" aria-label="What the mic hears">
+      <span class="fix-arrow" aria-hidden="true">&rarr;</span>
+      <input id="fixTo" type="text" maxlength="40" spellcheck="false" autocomplete="off"
+             placeholder="I meant… (ship)" aria-label="What you meant">
+      <button class="btn primary" type="submit">Add</button>
+    </form>
+    <p class="hint">You can also type in "It hears" yourself. Fixes only change what the mic hears, not what
+      you type. Leave "I meant" empty to just remove the word. Your fixes are saved in this browser.</p>
+  </section>
 
-    <label for="lang" class="field-gap">Language</label>
-    <select id="lang">
+  <section class="card">
+    <h2>Settings</h2>
+    <label for="lang">Language</label>
+    <select id="lang" aria-describedby="langHint">
       <option value="en-US">English (US)</option>
       <option value="en-GB">English (UK)</option>
       <option value="en-AU">English (Australia)</option>
+      <option value="en-CA">English (Canada)</option>
+      <option value="en-IN">English (India)</option>
+      <option value="en-IE">English (Ireland)</option>
+      <option value="en-NZ">English (New Zealand)</option>
+      <option value="en-PH">English (Philippines)</option>
+      <option value="en-SG">English (Singapore)</option>
+      <option value="en-ZA">English (South Africa)</option>
       <option value="es-ES">Español (España)</option>
       <option value="es-MX">Español (México)</option>
       <option value="fr-FR">Français</option>
@@ -396,16 +508,29 @@
       <option value="ko-KR">한국어</option>
       <option value="zh-CN">中文 (普通话)</option>
     </select>
+    <p id="langHint" class="hint">Pick the language you'll speak. Your words are posted in that language;
+      nothing is translated. If you speak English, choose the country closest to your accent, so fewer
+      words get misheard. The bad-word filter only works with the English choices.</p>
     <label class="switch"><input id="cap" type="checkbox" checked> Start each line with a capital letter</label>
+    <label class="switch"><input id="clean" type="checkbox" checked> Hide bad words</label>
+    <p class="hint switch-hint">Swear words and rude, grown-up, violent or drug words are taken out of
+      your lines or swapped for clean ones (<i>hell</i> &rarr; <i>heck</i>), so they never reach chat.
+      Works when the language is English.</p>
   </section>
 
-  <section class="card">
+  <section class="card grow">
     <h2>Sent to chat</h2>
     <ul id="log"><li class="empty">Nothing yet. Your sentences will be listed here.</li></ul>
     <form id="testForm" class="send-row">
       <input id="testText" type="text" placeholder="Type a test message&hellip;">
       <button class="btn primary" type="submit">Send</button>
     </form>
+  </section>
+
+  <section id="listenCard" class="card" hidden>
+    <h2>Listening log <span class="badge">TEST SITE ONLY</span></h2>
+    <ul id="listenLog"><li class="empty">Turn on the mic and talk. Each time the browser stops and
+      restarts listening, and any unfinished words that were rescued, show up here.</li></ul>
   </section>
   </main>
 
@@ -433,6 +558,12 @@
     <p>In a new region the prim gives you a new link. Click it, and your open page switches over
       by itself. You can close the extra tab.</p>
 
+    <h3>Clean chat</h3>
+    <p><b>Hide bad words</b> is on unless you switch it off under Settings. Swear words and rude,
+      grown-up, violent or drug words are removed, or swapped for clean ones like <i>heck</i>,
+      <i>darn</i> or <i>jerk</i> so your sentences still read well.</p>
+    <p>The mic sometimes mishears "six" as "s*x", so in English it's always posted as <b>six</b>.</p>
+
     <h3>Prim menu (touch the prim)</h3>
     <dl class="menu">
       <dt>Shout 100m</dt><dd>Your lines reach 100 m (the default)</dd>
@@ -452,11 +583,17 @@
       <dt>"Microphone blocked"</dt>
       <dd>Click the icon at the left of the browser's address bar, allow the microphone, then press
         <b>Turn On Mic</b> again.</dd>
-      <dt>Your name shows as ?????</dt>
-      <dd>Touch the prim &rarr; <b>Set Name</b> and type a name using plain letters.</dd>
+      <dt>My chat name looks different from my display name</dt>
+      <dd>Second Life only allows plain letters, numbers and simple symbols in object names, and the
+        prim's name is what labels your chat. Fancy letters, symbols, emoji and other alphabets would
+        show as <b>?</b>, so they're left out. If nothing readable is left, your username is used instead.
+        To choose another name, touch the prim &rarr; <b>Set Name</b> and type it with plain letters.
+        Your words themselves can still use any characters.</dd>
       <dt>It stops working on some land</dt>
       <dd>Scripts are switched off on no-script land.</dd>
     </dl>
+    <p>Still stuck, found a bug, or have an idea? Email
+      <a class="contact-mail" data-user="dev.luv" data-domain="outlook.com">dev.luv [at] outlook.com</a>.</p>
 
     <div class="tip">
       <b>Keep it safe</b>
@@ -467,9 +604,57 @@
       </ul>
     </div>
   </aside>
+
+  <aside class="card side news" aria-labelledby="newsTitle">
+    <h2 id="newsTitle">What's new</h2>
+
+    <h3>November 14, 2026</h3>
+    <ul>
+      <li><b>Hide bad words.</b> Swear words and rude, grown-up, violent or drug words are taken out of
+        your lines or swapped for clean ones (<i>hell</i> &rarr; <i>heck</i>), so they never reach chat.
+        Works in Chrome and Edge. It's on unless you switch it off under Settings.</li>
+      <li><b>"Six", not "s*x".</b> The mic sometimes mishears "six" as "s*x", so in English it's now
+        always posted as six.</li>
+      <li><b>Fewer missed words.</b> If the browser stops listening in the middle of a sentence, the
+        words it already heard are now posted instead of lost, and it starts listening again faster.</li>
+      <li><b>My word fixes</b> (under the mic button). Click <b>Say the word</b>, say a word the mic keeps
+        getting wrong for you, then type how it should be spelled. It's fixed before it reaches chat.</li>
+      <li><b>More English accents</b> under Language: Canada, India, Ireland, New Zealand, Philippines,
+        Singapore and South Africa.</li>
+      <li><b>Language explained.</b> A note under Language says what it's for: it picks the language you
+        speak, and nothing is translated.</li>
+      <li><b>Talking tips</b> for clearer results, including help for people whose first language
+        isn't English.</li>
+      <li><b>Prim address</b> now sits at the top, above the mic button.</li>
+      <li><b>Contact.</b> Questions, bugs or ideas? Email
+        <a class="contact-mail" data-user="dev.luv" data-domain="outlook.com">dev.luv [at] outlook.com</a>.</li>
+    </ul>
+
+    <h3>November 13, 2026</h3>
+    <ul>
+      <li><b>New look</b> with a big round <b>Turn On Mic</b> button, and light and dark themes that
+        follow your computer's setting.</li>
+      <li><b>How to use</b> guide right on the page.</li>
+    </ul>
+  </aside>
+
+  <aside class="card side tips" aria-labelledby="tipsTitle">
+    <h2 id="tipsTitle">Talking tips</h2>
+    <ul>
+      <li><b>Pause briefly</b> between sentences. Each sentence is posted when you pause.</li>
+      <li>Under Settings, pick the <b>Language</b> that matches your accent, like English (US), (UK), (Canada) or (India).</li>
+      <li><b>English isn't your first language?</b> Still pick an English option, and try a few to see which one understands you best.</li>
+      <li>Does the mic keep getting the same word wrong? Add it under <b>My word fixes</b>.</li>
+      <li>Very fast or mumbled words can be misheard. Short words at the start of a sentence get missed most.</li>
+      <li>Wear <b>headphones</b>, so the mic doesn't pick up Second Life music or voice chat.</li>
+      <li>If it mishears you a lot, try the other browser: <b>Chrome</b> and <b>Edge</b> use different speech services.</li>
+    </ul>
+  </aside>
   </div>
 
   <footer>
+    <p>Questions, problems or suggestions? Email
+      <a class="contact-mail" data-user="dev.luv" data-domain="outlook.com">dev.luv [at] outlook.com</a>.</p>
     <p>Your browser's own speech service turns speech into text (Google in Chrome, Microsoft in Edge).
       The text then goes straight from your browser to your prim. This website never receives it.</p>
     <p>Not affiliated with Linden Lab.</p>
@@ -479,17 +664,36 @@
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const urlBox = $('url'), langBox = $('lang'), capBox = $('cap'), micBtn = $('mic');
+  const urlBox = $('url'), langBox = $('lang'), capBox = $('cap'), cleanBox = $('clean'), micBtn = $('mic');
   const log = $('log'), hearing = $('hearing');
+
+  // The live site and test copies share one web origin (webdev0486.github.io),
+  // so each keeps its own saved settings and tab messages. Copies that aren't
+  // the live site show a TEST badge.
+  // The contact address is put together here, so simple spam robots that
+  // read the page's text can't pick it up.
+  document.querySelectorAll('.contact-mail').forEach(a => {
+    const address = a.dataset.user + '@' + a.dataset.domain;
+    a.href = 'mailto:' + address;
+    a.textContent = address;
+  });
+
+  const site = location.pathname.split('/')[1] || '';
+  const isLive = site === 'voice-to-sl';
+  const KEY = isLive ? 'voice2sl' : 'voice2sl@' + site;
+  if (!isLive) {
+    $('testBadge').hidden = false;
+    document.title += ' (TEST)';
+  }
 
   // Settings are remembered between visits when the browser allows it.
   const store = {
     get(k, fallback) {
-      try { const v = localStorage.getItem('voice2sl.' + k); return v === null ? fallback : v; }
+      try { const v = localStorage.getItem(KEY + '.' + k); return v === null ? fallback : v; }
       catch (e) { return fallback; }
     },
     set(k, v) {
-      try { localStorage.setItem('voice2sl.' + k, v); } catch (e) {}
+      try { localStorage.setItem(KEY + '.' + k, v); } catch (e) {}
     }
   };
 
@@ -550,6 +754,7 @@
     if (url) setAddress(url);
   });
   capBox.addEventListener('change', () => store.set('cap', capBox.checked ? '1' : '0'));
+  cleanBox.addEventListener('change', () => store.set('clean', cleanBox.checked ? '1' : '0'));
 
   // ---- Chat log ----------------------------------------------------------
   function addLog(text) {
@@ -571,11 +776,344 @@
     li.querySelector('span').textContent += ' — not sent (' + why + ')';
   }
 
+  // ---- Clean chat --------------------------------------------------------
+  // English only. A bad word is swapped for a clean one so the sentence still
+  // reads well ("hell" -> "heck"), or removed when it only adds emphasis
+  // ("that's fucking great" -> "that's great"). Slurs, sexual words, hate
+  // words and drug words are always removed; threats and self-harm phrases
+  // are swapped ("kill yourself" -> "get lost"). Whole words only, so
+  // "class" or "hello" are never touched.
+  const english = () => /^en/i.test(langBox.value);
+  const B = '(?<![\\p{L}\\p{N}])', E = '(?![\\p{L}\\p{N}])';
+
+  // Keeps the case of what was said: "Fuck" -> "Frick", "FUCK" -> "FRICK".
+  function matchCase(src, out) {
+    const letters = src.replace(/[^\p{L}]/gu, '');
+    if (letters.length > 1 && letters === letters.toUpperCase() && letters !== letters.toLowerCase()) {
+      return out.toUpperCase();
+    }
+    const first = letters.charAt(0);
+    return first && first !== first.toLowerCase() ? out.charAt(0).toUpperCase() + out.slice(1) : out;
+  }
+
+  // Word -> what to post instead: a clean word, '' to remove it, null to
+  // keep it, or a function that decides from the words next to it.
+  const WORDS = new Map();
+  function addWords(list, rule) {
+    for (const item of list.trim().split(/\s+/)) {
+      const [word, swap] = item.split('=');
+      WORDS.set(word, rule !== undefined ? rule : swap.replace(/_/g, ' '));
+    }
+  }
+  const emphasis = alt => (prev, next) => next ? '' : alt;   // "so fucking good" -> "so good"
+  const INSULT = new Set(['a', 'an', 'you', 'such', 'total', 'real', 'little', 'absolute', 'complete']);
+  const insult = (alt, otherwise) => prev => INSULT.has(prev) ? alt : otherwise;
+  const STUFF = new Set(['the', 'this', 'that', 'these', 'those', 'my', 'your', 'his', 'her', 'its', 'our',
+    'their', 'some', 'any', 'no', 'all', 'of', 'much', 'more', 'enough', 'own', 'good', 'bad', 'cool',
+    'weird', 'crazy', 'same', 'other', 'real']);
+  const JUNK = new Set(['is', 'was', 'are', 'were', 'be', 'been', 'like', 'looks', 'smells', 'sounds', 'feel', 'feels']);
+  // "Shit!" -> "Shoot!", "my shit" -> "my stuff", "that's shit" -> "that's junk"
+  const shit = (prev, next, tail) =>
+    tail ? 'stuff' : JUNK.has(prev) || /'(s|re)$/.test(prev) ? 'junk' : STUFF.has(prev) ? 'stuff' : 'shoot';
+
+  // Listed most common first: a word the speech service already starred out
+  // ("f***") is matched to the first word here that fits.
+  addWords('fucking fuckin fucken motherfucking motherfuckin', emphasis('freaking'));
+  addWords('fuck=frick fucks=fricks fucked=screwed fucker=jerk fuckers=jerks motherfucker=jerk ' +
+    'motherfuckers=jerks fuckhead=jerk fuckheads=jerks fuckface=jerk fuckwit=jerk fuckup=screwup ' +
+    'fuckups=screwups fuckload=ton clusterfuck=mess mofo=jerk fck=frick fuk=frick');
+  addWords('shit', shit);
+  addWords('shits=stuff shitty=crummy shitting=kidding shithead=jerk shitheads=jerks shithole=dump ' +
+    'shitload=ton shitton=ton shitstorm=mess shitshow=mess dipshit=jerk dipshits=jerks bullshit=nonsense ' +
+    'bullshitting=kidding horseshit=nonsense');
+  addWords('bitch=jerk bitches=jerks bitching=complaining bitched=complained bitchy=grumpy');
+  addWords('ass=butt asses=butts asshole=jerk assholes=jerks asshat=jerk asswipe=jerk dumbass=dummy ' +
+    'jackass=jerk smartass=smarty badass=tough kickass=awesome arse=butt arsehole=jerk arseholes=jerks');
+  addWords('cunt=jerk cunts=jerks bastard=jerk bastards=jerks twat=jerk twats=jerks wanker=jerk ' +
+    'wankers=jerks dickhead=jerk dickheads=jerks cocksucker=jerk cocksuckers=jerks douche=jerk ' +
+    'douchebag=jerk douchebags=jerks');
+  addWords('dick', insult('jerk', ''));
+  addWords('dicks', insult('jerks', ''));
+  addWords('prick', insult('jerk', null));
+  addWords('pricks', insult('jerks', null));
+  addWords('pussy', insult('wimp', ''));
+  addWords('pussies', insult('wimps', ''));
+  addWords('goddamn goddamned goddam', emphasis('darn'));
+  addWords('damn=darn damned=darned dammit=darn_it damnit=darn_it goddammit=darn_it goddamnit=darn_it ' +
+    'hell=heck hellhole=dump crap=crud crappy=cruddy piss=pee pissed=mad pissing=peeing pisses=pees ' +
+    'bugger=darn bollocks=nonsense');
+  addWords('effing', emphasis('freaking'));
+  addWords("biatch=jerk beyotch=jerk jackoff=jerk jerkoff=jerk dumbfuck=dummy dickwad=jerk dickweed=jerk " +
+    "fatass=jerk lardass=jerk scumbag=jerk bullcrap=nonsense");
+  // Sexual words
+  addWords('wank wanks wanking wanked cock cocks slut sluts slutty whore whores cum cumming cumshot jizz ' +
+    'porn porno dildo dildos blowjob blowjobs handjob handjobs boner boners tits titty titties boob boobs ' +
+    'boobies sex sexy sexier sexiest sexual sexually sext sexts sexting nude nudes nudity naked horny ' +
+    'orgasm orgasms penis penises vagina vaginas anal anus nipple nipples testicles semen clit clitoris ' +
+    'erection erections erotic masturbate masturbating masturbation fap fapping hentai nsfw pornhub ' +
+    'onlyfans milf milfs vibrator vibrators condom condoms viagra threesome foreplay fetish bondage bdsm ' +
+    'hooker hookers prostitute prostitutes stripper strippers rape raped rapes raping rapist rapists ' +
+    'molest molested molester molesters molesting pedo pedos pedophile pedophiles paedophile paedophiles ' +
+    'incest humping grope groped groping thot thots hoe hoes skank skanks slag slags', '');
+  // Slurs and hate words
+  addWords('nigger niggers nigga niggas niggaz negro negroes faggot faggots fag fags homo homos lesbo ' +
+    'lesbos shemale retard retards retarded tard spaz spastic spic spics kike kikes chink chinks jap japs ' +
+    'paki pakis tranny trannies dyke dykes coon coons wetback wetbacks gook gooks raghead ragheads ' +
+    'towelhead towelheads beaner beaners redskin redskins honky nazi nazis heil kkk', '');
+  // Drug words and self-harm
+  addWords('weed marijuana cannabis kush ganja doobie stoner stoners bong bongs cocaine heroin meth ' +
+    'methhead crackhead crackheads mdma lsd shrooms fentanyl ketamine opium suicide suicidal kms', '');
+  // Chat shorthand
+  addWords("wtf=what_the_heck stfu=shut_up gtfo=go_away ffs=for_Pete's_sake kys=get_lost omfg=omg lmfao=lmao");
+  addWords('af', '');   // "cool af" -> "cool"
+
+  // Two spoken words that make one bad word: "mother fucker", "bull shit".
+  const JOIN = new RegExp(B + '(mother|bull|horse|dip|god|ass|dumb|jack|smart|dick|shit|fuck|fat|lard|blow|hand)[ -]' +
+    '(fuck|shit|damn|hole|ass|head|ton|load|face|wit|storm|show|job)', 'giu');
+  const JOINED = new Set(['motherfuck', 'bullshit', 'horseshit', 'dipshit', 'goddamn', 'asshole', 'dumbass',
+    'jackass', 'smartass', 'dickhead', 'shithead', 'shithole', 'shitton', 'shitload', 'shitstorm', 'shitshow',
+    'fuckface', 'fuckhead', 'fuckwit', 'dumbfuck', 'fatass', 'lardass', 'blowjob', 'handjob']);
+
+  // Whole sayings that read better swapped together ('' removes them).
+  const PHRASES = [
+    ['son of a bitch', 'son of a gun'],
+    ['go fuck yourself|eat shit|(?:go )?suck (?:a |my )?(?:dick|cock|balls|ass)', 'get lost'],
+    ['(?:go )?(?:kill|hang|neck) (?:yourself|yourselves|urself|ur self|your self)|' +
+      '(?:go )?die in a (?:fire|hole|ditch)|go die|drop dead', 'get lost'],
+    ['kill(s|ed|ing)? (?:myself|my self)',
+      g => ({ '': 'scream', s: 'screams', ed: 'screamed', ing: 'screaming' })[(g[1] || '').toLowerCase()]],
+    ['(?:kill|shoot|stab|murder) (?:you|u)', 'get you'],
+    ['slit (?:your|my|ur|his|her|their) wrists?', ''],
+    ['(?:jerk|jack)(?:s|ed|ing|in)? off', ''],
+    ['(?:smoke|smokes|smoking|smoked) (?:pot|weed|crack|a joint|a blunt|joints|blunts)', ''],
+    ['screw (you|u|ya|this|that|it|him|her|them)', 'forget $1'],
+    ['(?:fuck|piss|bugger) off', 'go away'],
+    ['the fuck', 'the heck'],
+    ['(?:fucking|fuckin|bloody) hell', 'heck'],
+    ["for fuck(?:'?s)? sake", "for Pete's sake"],
+    ['holy (?:shit|fuck|crap)', 'holy cow'],
+    ['oh (?:shit|fuck|crap)', 'oh no'],
+    ['no shit', 'no way'],
+    ['full of (?:shit|crap)', 'full of it'],
+    ['piece of (?:shit|crap)', 'piece of junk'],
+    ['shit happens', 'stuff happens'],
+    ['goddamn it', 'darn it'],
+    ['(give|gives|gave|giving|given) a (?:fuck|shit|damn|crap)',
+      g => ({ give: 'care', gives: 'cares', gave: 'cared', giving: 'caring', given: 'cared' })[g[1].toLowerCase()]],
+    ['fuck(s|ed|ing|in)? (up|around|with)',
+      g => ({ '': 'mess', s: 'messes', ed: 'messed', ing: 'messing', in: 'messing' })[(g[1] || '').toLowerCase()] + ' ' + g[2]],
+    ['piss(es|ed|ing)? (me|him|her|them|you|us) off',
+      g => ({ '': 'bug', es: 'bugs', ed: 'bugged', ing: 'bugging' })[(g[1] || '').toLowerCase()] + ' ' + g[2]],
+    ['pissed off', 'ticked off'],
+    ['fuck (you|u|ya|this|that|it|him|her|them)', 'forget $1']
+  ].map(([words, swap]) => [new RegExp(B + '(?:' + words.replace(/ /g, '\\s+') + ')' + E, 'giu'), swap]);
+
+  // A word the speech service already starred out, like "f***" or "a**hole".
+  const MASKED = /[\p{L}\p{N}]*\*{2,}[\p{L}\p{N}*]*/gu;
+  function unmask(masked) {
+    if (!/\p{L}/u.test(masked)) return '';
+    const fits = new RegExp('^' + masked.toLowerCase().replace(/\*/g, '.') + '$', 'u');
+    for (const word of WORDS.keys()) if (fits.test(word)) return word;
+    return '';
+  }
+
+  // Edge stars out the whole word ("you're an *******"), so only its length
+  // is left. Guess the likeliest word from the length and the words next to
+  // it; the swaps below then turn it into a clean word ("you're a jerk").
+  const STARS = /(?<![\p{L}\p{N}*])\*{3,}(?![\p{L}\p{N}*])/gu;
+  function guessStars(count, before, after) {
+    const p = ((before.match(/([\p{L}\p{N}']+)\s+$/u) || [])[1] || '').toLowerCase();
+    const n = ((after.match(/^\s+([\p{L}\p{N}']+)/u) || [])[1] || '').toLowerCase();
+    const insultSpot = INSULT.has(p);                       // "you ***", "a ***"
+    const endsInsult = !n || /^(and|or|but|too|lol|haha)$/.test(n);
+    switch (count) {
+      case 3: return 'ass';
+      case 4: return p === 'the' || /^(you|u|ya|off|this|that|it|up|around|with|him|her|them)$/.test(n) ||
+        /(?:give|gives|gave|giving|given)\s+a\s+$/i.test(before) ? 'fuck' : insultSpot ? 'dick' : 'shit';
+      case 5: return 'bitch';
+      case 6: return insultSpot ? 'fucker' : 'fucked';
+      case 7: return insultSpot && endsInsult ? 'asshole' : 'fucking';
+      case 8: return insultSpot && endsInsult ? 'asshole' : 'bullshit';
+      case 12: return 'motherfucker';
+      case 13: return 'motherfucking';
+    }
+    return '';   // left as stars, so it's removed
+  }
+
+  const TOKEN = /([\p{L}\p{N}]*\*{2,}[\p{L}\p{N}*]*|[\p{L}\p{N}]+(?:'[\p{L}\p{N}]+)*'?)/u;
+  // The word right before (step -1) or after (step 1) a word, if only a space is between.
+  function near(parts, i, step) {
+    const j = i + step * 2;
+    return j > 0 && j < parts.length && parts[j] && /^\s+$/.test(parts[i + step]) ? parts[j].toLowerCase() : '';
+  }
+
+  function cleanLine(text, spoken) {
+    let t = text.replace(/[‘’]/g, "'");
+    if (spoken) {   // typed stars ("***") are left alone and removed
+      t = t.replace(STARS, (m, at, all) => guessStars(m.length, all.slice(0, at), all.slice(at + m.length)) || m);
+    }
+    t = t.replace(MASKED, m => { const w = unmask(m); return w ? matchCase(m, w) : m; })
+      .replace(JOIN, (m, a, b) => JOINED.has((a + b).toLowerCase()) ? a + b : m);
+    let removed = false;
+    for (const [re, swap] of PHRASES) {
+      t = t.replace(re, (m, ...rest) => {
+        const g = [m, ...rest.slice(0, -2)];
+        const out = typeof swap === 'function' ? swap(g) : swap.replace(/\$(\d)/g, (x, n) => g[n] || '');
+        if (!out) removed = true;
+        return matchCase(m, out);
+      });
+    }
+    const parts = t.split(TOKEN);   // words sit at the odd places
+    for (let i = 1; i < parts.length; i += 2) {
+      const token = parts[i];
+      const cut = token.indexOf("'");
+      const word = cut > 0 ? token.slice(0, cut) : token;
+      const tail = cut > 0 && cut < token.length - 1 ? token.slice(cut) : '';   // "'s", "'re"...
+      const key = word.toLowerCase();
+      const masked = key.includes('*');   // starred out and not recognised
+      if (!masked && !WORDS.has(key)) continue;
+      const prev = near(parts, i, -1), next = near(parts, i, 1);
+      const rule = masked ? '' : WORDS.get(key);
+      const out = typeof rule === 'function' ? rule(prev, next, tail) : rule;
+      if (out === null) continue;
+      if (out) {
+        parts[i] = matchCase(word, out) + tail;
+        if (prev === 'a' || prev === 'an') {   // "an asshole" -> "a jerk"
+          parts[i - 2] = matchCase(parts[i - 2], /^[aeiou]/i.test(out) ? 'an' : 'a');
+        }
+      } else {
+        parts[i] = '';
+        removed = true;
+        if (!next && (prev === 'a' || prev === 'an' || prev === 'the')) parts[i - 2] = '';
+        else if (next && (prev === 'a' || prev === 'an')) {   // "a fucking idiot" -> "an idiot"
+          parts[i - 2] = matchCase(parts[i - 2], /^[aeiou]/i.test(next) ? 'an' : 'a');
+        }
+      }
+    }
+    t = parts.join('');
+    if (removed) {
+      t = t.replace(/\s+/g, ' ')
+        .replace(/ ([,.!?;:])/g, '$1')
+        .replace(/[,;:]+(?=[,.!?;:]| *$)/g, '')
+        .replace(/^[ ,;:.!?]+/, '');
+    }
+    return t.trim();
+  }
+
+  // The mic often hears "six" as "sex"; the speech service can't tell them apart.
+  const SEX = new RegExp(B + 'sex' + E, 'giu');
+
+  // Speech gets the six fix, then the person's own word fixes, then the
+  // bad-word filter, so a fix can never sneak a bad word into chat.
+  function tidy(text, spoken) {
+    const en = english();
+    if (spoken && en) text = text.replace(SEX, m => matchCase(m, 'six'));
+    if (spoken) text = applyFixes(text);
+    return en && cleanBox.checked ? cleanLine(text, spoken) : text;
+  }
+
+  // ---- My word fixes -----------------------------------------------------
+  // Words the mic keeps getting wrong for this person ("sheep" -> "ship"),
+  // saved in this browser. Whole words only; longer ones are matched first.
+  const MAX_FIXES = 50;
+  const fixKey = s => s.trim().toLowerCase().replace(/\s+/g, ' ');
+  const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let fixes = [], fixRe = null;
+  try { fixes = JSON.parse(store.get('fixes', '[]')); } catch (e) {}
+  if (!Array.isArray(fixes)) fixes = [];
+  fixes = fixes.filter(f => f && typeof f.from === 'string' && typeof f.to === 'string' && f.from.trim());
+
+  function buildFixes() {
+    const heard = fixes.map(f => fixKey(f.from)).sort((a, b) => b.length - a.length);
+    fixRe = heard.length
+      ? new RegExp(B + '(?:' + heard.map(h => escapeRe(h).replace(/ /g, '\\s+')).join('|') + ')' + E, 'giu')
+      : null;
+  }
+
+  function applyFixes(text) {
+    if (!fixRe) return text;
+    return text.replace(fixRe, m => {
+      const fix = fixes.find(f => fixKey(f.from) === fixKey(m));
+      return fix ? matchCase(m, fix.to) : m;
+    }).replace(/ {2,}/g, ' ');
+  }
+
+  function renderFixes() {
+    const list = $('fixList');
+    list.textContent = '';
+    if (!fixes.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'No fixes yet.';
+      list.append(li);
+      return;
+    }
+    for (const fix of fixes) {
+      const li = document.createElement('li');
+      const text = document.createElement('span');
+      text.className = 'fix-text';
+      const from = document.createElement('b');
+      from.textContent = fix.from;
+      const to = document.createElement('b');
+      to.textContent = fix.to || '(removed)';
+      text.append(from, ' → ', to);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'fix-remove';
+      remove.textContent = '×';
+      remove.title = 'Remove this fix';
+      remove.setAttribute('aria-label', 'Remove the fix for ' + fix.from);
+      remove.addEventListener('click', () => {
+        fixes = fixes.filter(f => f !== fix);
+        saveFixes();
+      });
+      li.append(text, remove);
+      list.append(li);
+    }
+  }
+
+  function saveFixes() {
+    store.set('fixes', JSON.stringify(fixes));
+    buildFixes();
+    renderFixes();
+  }
+
+  $('fixForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const from = $('fixFrom').value.trim().replace(/\s+/g, ' ');
+    const to = $('fixTo').value.trim().replace(/\s+/g, ' ');
+    if (!from) {
+      $('fixStatus').textContent = 'First click Say the word, or type what the mic hears.';
+      $('fixFrom').focus();
+      return;
+    }
+    if (fixKey(from) === fixKey(to)) {
+      $('fixStatus').textContent = 'The mic already writes "' + from + '" right, so no fix is needed.';
+      return;
+    }
+    fixes = fixes.filter(f => fixKey(f.from) !== fixKey(from));   // a new fix for the same word replaces the old one
+    fixes.push({ from, to });
+    while (fixes.length > MAX_FIXES) fixes.shift();
+    saveFixes();
+    $('fixStatus').textContent = 'Added: ' + from + ' → ' + (to || '(removed)') + '.';
+    $('fixFrom').value = '';
+    $('fixTo').value = '';
+  });
+
+  buildFixes();
+  renderFixes();
+
   // ---- Sending to the prim -----------------------------------------------
   let queue = Promise.resolve();   // keeps lines in the order they were spoken
 
-  function send(raw) {
-    let text = raw.trim().replace(/\s+/g, ' ');
+  function send(raw, spoken) {
+    const said = raw.trim().replace(/\s+/g, ' ');
+    if (!said) return;
+    let text = tidy(said, spoken);
+    if (!/[\p{L}\p{N}]/u.test(text) && /[\p{L}\p{N}]/u.test(said)) {
+      markFailed(addLog('(hidden)'), 'only bad words');
+      return;
+    }
     if (!text) return;
     if (capBox.checked) text = text.charAt(0).toUpperCase() + text.slice(1);
     const item = addLog(text);
@@ -597,7 +1135,31 @@
 
   // ---- Speech recognition ------------------------------------------------
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec = null, wanted = false, retryDelay = 250;
+  let rec = null, wanted = false, retryDelay = 0;
+  let pending = '';            // words heard but not finished into a sentence yet
+  let sentFinals = new Set();  // finished sentences already sent (this session)
+  let startedAt = 0, endedAt = 0;
+
+  // ---- Listening log (test site only) ------------------------------------
+  // Shows when the browser stops and restarts listening, and which unfinished
+  // words were rescued, so missed speech can be tracked down.
+  const listenLog = $('listenLog');
+  if (!isLive) $('listenCard').hidden = false;
+  const seconds = ms => (ms / 1000).toFixed(1) + ' s';
+
+  function note(text) {
+    if (isLive) return;
+    const empty = listenLog.querySelector('.empty');
+    if (empty) empty.remove();
+    const li = document.createElement('li');
+    const time = document.createElement('time');
+    time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const span = document.createElement('span');
+    span.textContent = text;
+    li.append(time, span);
+    listenLog.prepend(li);
+    while (listenLog.children.length > 60) listenLog.lastChild.remove();
+  }
 
   function setStatus(text, mode) {
     $('statusText').textContent = text;
@@ -626,19 +1188,33 @@
     r.continuous = true;
     r.interimResults = true;
 
-    r.onstart = () => setStatus('Listening — just talk', 'live');
+    r.onstart = () => {
+      startedAt = Date.now();
+      pending = '';
+      sentFinals = new Set();
+      note(endedAt ? 'Listening again after a ' + seconds(startedAt - endedAt) + ' gap' : 'Listening started');
+      endedAt = 0;
+      setStatus('Listening — just talk', 'live');
+    };
 
     r.onresult = e => {
-      let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        const result = e.results[i];
-        if (result.isFinal) send(result[0].transcript);
-        else interim += result[0].transcript;
+        if (e.results[i].isFinal && !sentFinals.has(i)) {
+          sentFinals.add(i);
+          send(e.results[i][0].transcript, true);
+        }
       }
-      hearing.textContent = interim;
+      // Kept so the words aren't lost if the browser stops listening before
+      // it finishes the sentence.
+      pending = '';
+      for (let i = 0; i < e.results.length; i++) {
+        if (!e.results[i].isFinal) pending += e.results[i][0].transcript;
+      }
+      hearing.textContent = tidy(pending, true);
     };
 
     r.onerror = e => {
+      note('Speech service: ' + e.error);
       switch (e.error) {
         case 'no-speech':
         case 'aborted':
@@ -663,12 +1239,24 @@
       }
     };
 
-    // The browser ends a session after a pause or about a minute; keep going.
+    // The browser stops listening after a pause or about a minute. Post any
+    // unfinished words, then start again straight away so little is missed.
     r.onend = () => {
       hearing.textContent = '';
-      if (!wanted) return;
-      const delay = retryDelay;
-      retryDelay = 250;
+      if (!wanted) { pending = ''; return; }   // turned off: drop them
+      endedAt = Date.now();
+      const ran = startedAt ? endedAt - startedAt : 0;
+      note(startedAt ? 'Browser stopped listening after ' + seconds(ran) : "Listening didn't start");
+      startedAt = 0;
+      if (pending.trim()) {
+        note('Rescued unfinished words: "' + tidy(pending.trim(), true) + '"');
+        send(pending, true);
+      }
+      pending = '';
+      // Wait a moment only if it stops again at once (an error, or another
+      // app using the mic), so it can't restart over and over.
+      const delay = Math.max(retryDelay, ran < 1000 ? 1000 : 0);
+      retryDelay = 0;
       setTimeout(() => {
         if (!wanted) return;
         try { r.start(); } catch (err) { /* already running */ }
@@ -683,9 +1271,11 @@
       urlBox.focus();
       return;
     }
+    cancelCapture(false);   // stop listening for a word fix first
     if (!rec) rec = createRecognizer();
     rec.lang = langBox.value;
     wanted = true;
+    endedAt = 0;
     updateButton();
     setStatus('Starting…', '');
     $('handedOff').hidden = true;
@@ -703,10 +1293,79 @@
     }
   });
 
+  // ---- Say the word for a fix --------------------------------------------
+  // Listens once and puts what the mic heard into "It hears", so the fix
+  // matches exactly what the speech service writes. Normal listening pauses
+  // meanwhile, so the word isn't posted to chat, and comes back afterwards.
+  const sayBtn = $('fixSay'), sayLabel = $('fixSayLabel'), fixStatus = $('fixStatus');
+  let capture = null;
+  if (!SR) sayBtn.hidden = true;
+
+  // "Sheep." -> "sheep" (the six fix too, so it matches what fixes see)
+  function cleanHeard(text) {
+    text = text.replace(/^[\s.,!?;:"']+|[\s.,!?;:"']+$/g, '').replace(/\s+/g, ' ');
+    if (english()) text = text.replace(SEX, 'six');
+    return text.toLowerCase().slice(0, 40);
+  }
+
+  function endCapture(message, resume) {
+    capture = null;
+    sayBtn.classList.remove('on');
+    sayLabel.textContent = 'Say the word';
+    fixStatus.textContent = message;
+    if (resume && !wanted) startListening();
+  }
+
+  function cancelCapture(resume) {
+    const c = capture;
+    if (!c) return;
+    endCapture('', resume);    // capture is now null, so c's own events are ignored
+    try { c.abort(); } catch (err) {}
+  }
+
+  sayBtn.addEventListener('click', () => {
+    if (capture) { cancelCapture(capture.resume); return; }   // clicked again: cancel
+    const resume = wanted;
+    if (wanted) stopListening('Paused while you add a word fix…');
+    const c = capture = new SR();
+    c.resume = resume;
+    c.lang = langBox.value;
+    c.continuous = false;
+    c.interimResults = true;
+    let heard = '', failed = '';
+    sayBtn.classList.add('on');
+    sayLabel.textContent = 'Listening… (click to cancel)';
+    fixStatus.textContent = 'Say the word the mic gets wrong for you.';
+    $('fixFrom').value = '';
+    c.onresult = e => {
+      heard = [...e.results].map(r => r[0].transcript).join('');
+      $('fixFrom').value = cleanHeard(heard);
+    };
+    c.onerror = e => { failed = e.error; };
+    c.onend = () => {
+      if (capture !== c) return;
+      const word = cleanHeard(heard);
+      if (word) {
+        $('fixFrom').value = word;
+        endCapture('The mic heard "' + word + '". Now type how it should be spelled in "I meant", then click Add.', resume);
+        $('fixTo').focus();
+      } else if (failed === 'not-allowed' || failed === 'service-not-allowed') {
+        endCapture('Microphone blocked. Click the icon at the left of the address bar, allow the microphone, and try again.', resume);
+      } else {
+        endCapture("Didn't catch that. Click Say the word and try again.", resume);
+      }
+    };
+    // Give normal listening a moment to let go of the mic first.
+    setTimeout(() => {
+      if (capture !== c) return;
+      try { c.start(); } catch (err) { endCapture("Couldn't start the mic. Try again.", resume); }
+    }, resume ? 400 : 0);
+  });
+
   // ---- Several tabs ------------------------------------------------------
   // Each new link from the prim opens another tab. A tab that's already
   // listening takes over the new address, so speech is never sent twice.
-  const tabs = 'BroadcastChannel' in window ? new BroadcastChannel('voice2sl') : null;
+  const tabs = 'BroadcastChannel' in window ? new BroadcastChannel(KEY) : null;
   if (tabs) {
     tabs.onmessage = e => {
       const msg = e.data || {};
@@ -764,6 +1423,7 @@
   const savedLang = store.get('lang', navigator.language);
   langBox.value = [...langBox.options].some(o => o.value === savedLang) ? savedLang : 'en-US';
   capBox.checked = store.get('cap', '1') === '1';
+  cleanBox.checked = store.get('clean', '1') === '1';
 
   if (!SR) {
     $('unsupported').hidden = false;
